@@ -1,10 +1,18 @@
 import robothub_depthai
 
+
 class ExampleApplication(robothub_depthai.RobotHubApplication):
     def on_start(self):
-        for camera in self.hub_cameras:
-            color = camera.create_camera('color', resolution='1080p', fps=30)
-            nn = camera.create_nn('person-detection-retail-0013', input=color)
+        for camera in self.connected_cameras:
+            color_resolution = '1080p'
+            mono_resolution = '400p'
 
-            # It will automatically create a stream and assign matching callback based on Component type
-            camera.create_stream(component=nn, unique_key=f'nn_stream_{camera.id}', name='Detections stream')
+            if camera.has_color:
+                print(f'Initialized color stream with resolution: {color_resolution}')
+                color = camera.create_camera('color', resolution=color_resolution, fps=30)
+                camera.create_stream(component=color, unique_key=f'color_{camera.id}', name=f'Color stream {camera.id}')
+
+            if camera.has_stereo:
+                print(f'Initialized depth stream with resolution: {mono_resolution}')
+                stereo = camera.create_stereo(resolution=mono_resolution, fps=30)
+                camera.create_stream(component=stereo, unique_key=f'depth_{camera.id}', name=f'Depth stream {camera.id}')
