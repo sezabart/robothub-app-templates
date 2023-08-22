@@ -1,18 +1,18 @@
+from typing import Optional
+
 from depthai_sdk import OakCamera
 from robothub_oak import LiveView, BaseApplication
-from robothub_oak.data_processors import BaseDataProcessor
 
 
-class ObjectDetection(BaseDataProcessor):
+class ObjectDetection:
     """
     This class is a data processor that will process the output from the pipeline.
     In this example we use the NN output to detect objects and send an event to the frontend.
     """
 
-    def __init__(self, live_view: LiveView):
-        super().__init__()
-        self.live_view = live_view
-
+    def __init__(self):
+        self.live_view: Optional[LiveView] = None
+ 
     def process_packets(self, packet):  # This method has to be implemented
         # Iterate over all detections and add a rectangle to the live view
         for detection in packet.detections:
@@ -31,6 +31,7 @@ class ExampleApplication(BaseApplication):
 
     def __init__(self):
         super().__init__()  # Add any initialization code here
+        self.object_detection = ObjectDetection()
 
     def setup_pipeline(self, device: OakCamera):  # This method has to be implemented
         """
@@ -50,9 +51,8 @@ class ExampleApplication(BaseApplication):
             manual_publish=True  # We will publish the frame manually in the data processor, disable if you want to stream the raw camera feed
         )
 
-        # Create a data processor that will process the NN output and send an event to the frontend
-        object_detection = ObjectDetection(live_view)
+        # Set live view for NN output processor, so it can publish frames
+        self.object_detection.live_view = live_view
 
         # Create a callback that will be called when the NN has processed a frame
-        # BaseDataProcessor implements the __call__ method, so we can pass it as a callback
-        device.callback(nn.out.main, object_detection)
+        device.callback(nn.out.main, self.object_detection.process_packets)
