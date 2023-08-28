@@ -33,18 +33,18 @@ class ExampleApplication(BaseApplication):
         super().__init__()  # Add any initialization code here
         self.object_detection = ObjectDetection()
 
-    def setup_pipeline(self, device: OakCamera):  # This method has to be implemented
+    def setup_pipeline(self, oak: OakCamera):  # This method has to be implemented
         """
         This method is the entrypoint for each device.
         OakCamera is a class from the DepthAI SDK package that provides a simple interface to create pipelines.
         Documentation for the DepthAI SDK can be found here: https://docs.luxonis.com/projects/sdk/en/latest/.
         """
-        color = device.create_camera(source="color", fps=30, resolution="1080p", encode="mjpeg")
-        nn = device.create_nn(model='yolov6nr3_coco_640x352', input=color)
+        color = oak.create_camera(source="color", fps=30, resolution="1080p", encode="mjpeg")
+        nn = oak.create_nn(model='yolov6nr3_coco_640x352', input=color)
 
         # Create a live view for the color camera. This will be displayed in the frontend and RobotHub app
         live_view = LiveView.create(
-            device=device,
+            device=oak,
             component=color,
             unique_key="color_stream",  # Unique key is used to identify the live view in the frontend
             name="Object detection",  # Stream name
@@ -55,4 +55,4 @@ class ExampleApplication(BaseApplication):
         self.object_detection.live_view = live_view
 
         # Create a callback that will be called when the NN has processed a frame
-        device.callback(nn.out.main, self.object_detection.process_packets)
+        oak.callback(nn.out.main, self.object_detection.process_packets)
