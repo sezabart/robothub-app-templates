@@ -15,7 +15,7 @@ class ExampleApplication(BaseApplication):
         Documentation for the DepthAI SDK can be found here: https://docs.luxonis.com/projects/sdk/en/latest/.
         """
         # Create a camera component with the following parameters:
-        color = oak.create_camera(source="color", fps=30, resolution="1080p", encode="mjpeg")
+        color = oak.create_camera(source="color", fps=30, resolution="1080p", encode="h264")
 
         # Create a live view for the color camera. This will be displayed in the frontend and RobotHub app.
         LiveView.create(
