@@ -1,8 +1,8 @@
 from depthai_sdk import OakCamera
-from robothub_oak import LiveView, BaseApplication
+from robothub import LiveView, BaseApplication
 
 
-class ExampleApplication(BaseApplication):
+class Application(BaseApplication):
     """
     This is an example application that shows how to use the OakCamera class to create an simple streaming pipeline.
     """

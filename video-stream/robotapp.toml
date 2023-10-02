@@ -6,9 +6,9 @@ name = "{{{ APP_NAME }}}"
 description = "This is a generated description. Replace it with your own."
 
 [runtime]
-application = "app.py#ExampleApplication"
+application = "app.py#Application"
 workdir = "/app"
 
 [runtime.runs_on]
 type = "image"
-name = "ghcr.io/luxonis/robothub-app-v2:2023.234.1402-regular"
+name = "ghcr.io/luxonis/robothub-app-v2:2023.272.0747-rvc2-regular"
