@@ -1,26 +1,49 @@
+import time
+
 from depthai_sdk import OakCamera
-from robothub import LiveView, BaseApplication
+from depthai_sdk.classes import DetectionPacket
+from robothub import BaseApplication, LiveView
+from robothub.events import send_image_event
+from robothub_core import CONFIGURATION
+
+
+class BusinessLogic:
+    def __init__(self):
+        self.last_image_event_upload_seconds = time.time()
+        self.last_video_event_upload_seconds = time.time()
+        self.live_view = None
+
+    def process_packets(self, packet: DetectionPacket):
+        for detection in packet.detections:
+            # visualize bounding box in the live view
+            bbox = [*detection.top_left, *detection.bottom_right]
+            self.live_view.add_rectangle(bbox, label=detection.label)
+
+            current_time_seconds = time.time()
+            # arbitrary condition for sending image events to RobotHub
+            if current_time_seconds - self.last_image_event_upload_seconds > CONFIGURATION["image_event_upload_interval_minutes"] * 60:
+                if detection.label == 'person':
+                    self.last_image_event_upload_seconds = current_time_seconds
+                    send_image_event(image=packet.frame, title='Person detected')
+            # arbitrary condition for sending video events to RobotHub
+            if current_time_seconds - self.last_video_event_upload_seconds > CONFIGURATION["video_event_upload_interval_minutes"] * 60:
+                if detection.label == 'person':
+                    self.last_video_event_upload_seconds = current_time_seconds
+                    self.live_view.save_video_event(before_seconds=60, after_seconds=60, title="Interesting video")
 
 
 class Application(BaseApplication):
-    """
-    This is an example application that shows how to use the OakCamera class to create an simple streaming pipeline.
-    """
+    business_logic = BusinessLogic()
 
-    def setup_pipeline(self, oak: OakCamera):  # This method has to be implemented
-        """
-        This method is the entrypoint for the device. Note: only one device is supported. If multiple devices are
-        connected, this method will be called only once for the first device.
-        OakCamera is a class from the DepthAI SDK package that provides a simple interface to create pipelines.
-        Documentation for the DepthAI SDK can be found here: https://docs.luxonis.com/projects/sdk/en/latest/.
-        """
-        # Create a camera component with the following parameters:
-        color = oak.create_camera(source="color", fps=30, resolution="1080p", encode="h264")
+    def setup_pipeline(self, oak: OakCamera):
+        """Define the pipeline using depthai-sdk."""
 
-        # Create a live view for the color camera. This will be displayed in the frontend and RobotHub app.
-        LiveView.create(
+        color = oak.create_camera(source='color', resolution="1080p", fps=30, encode='mjpeg')
+        nn = oak.create_nn(model='yolov5n_coco_416x416', input=color)
+        self.business_logic.live_view = LiveView.create(
             device=oak,
             component=color,
-            unique_key="color_stream",  # Unique key is used to identify the live view in the frontend
-            name="Color stream",  # Stream name
+            name="Color stream",
+            max_buffer_size=120
         )
+        oak.callback(output=nn.out.main, callback=self.business_logic.process_packets)
