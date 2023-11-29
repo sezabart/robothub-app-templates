@@ -1,10 +1,7 @@
 from typing import Optional, List, Tuple
 
 from src.api.ros.ros2_manager import ROS2Manager
-from src.robot.display import DisplayController
-from src.robot.led import LEDController
 from src.robot.movement import MovementController
-from src.robot.audio import AudioController
 from sensor_msgs.msg import BatteryState
 
 

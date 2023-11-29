@@ -154,7 +154,7 @@ class ROS2Manager:
                 log.info(f"Creating {topic_name} publisher")
                 self._publishers[topic_name] = self._node.create_publisher(msg_type, topic_name, qos_profile)
             else:
-                log.warning(f"Unknown message type '{msg_typer}'")
+                log.warning(f"Unknown message type '{msg_type}'")
     
     def create_service_client(self, srv_name: str, srv_type: Any) -> None:
         if srv_name not in self._service_clients:
@@ -184,7 +184,7 @@ class ROS2Manager:
                 log.info(f"Creating {topic_name} subscriber")
                 self._subscribers[topic_name] = self._node.create_subscription(msg_type, topic_name, callback, qos_profile)
             else:
-                log.warning(f"Unknown message type '{msg_type_str}'")
+                log.warning(f"Unknown message type '{msg_type}'")
 
     def _default_callback(self, msg) -> None:
         log.info(f"[Default callback] Received message: {msg}")
