@@ -6,7 +6,7 @@ name = "RAE Streaming Application"
 description = "Streams all cameras"
 
 [runtime]
-application = "app.py#Application"
+application = "src/app.py#Application"
 workdir = "/app"
 
 [runtime.frontend]
