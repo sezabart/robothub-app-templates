@@ -90,6 +90,8 @@ def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps
     rh_encoder.setRateControlMode(dai.VideoEncoderProperties.RateControlMode.CBR)
     rh_encoder.setNumFramesPool(3)
     node_input.link(rh_encoder.input)
+    print(rh_encoder.getWidth())
+    print(rh_encoder.getHeight())
     return rh_encoder
 
 
