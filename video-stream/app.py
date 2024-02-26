@@ -5,7 +5,7 @@ import blobconverter
 import depthai as dai
 import robothub as rh
 
-
+# [business logic]
 class BusinessLogic:
     def __init__(self):
         self.last_image_event_upload_seconds = time.time()
@@ -31,8 +31,9 @@ class BusinessLogic:
             #     if detection.label == 'person':
             #         self.last_video_event_upload_seconds = current_time_seconds
             #         self.live_view.save_video_event(before_seconds=60, after_seconds=60, title="Interesting video")
+# [/business logic]
 
-
+# [application]
 class Application(rh.BaseDepthAIApplication):
     business_logic = BusinessLogic()
 
@@ -61,7 +62,7 @@ class Application(rh.BaseDepthAIApplication):
             object_detections = object_detections_queue.get()
             self.business_logic.process_pipeline_outputs(h264_frame=h264_frame, mjpeg_frame=mjpeg_frame, object_detections=object_detections)
             time.sleep(0.001)
-
+# [/application]
 
 def create_rgb_sensor(pipeline: dai.Pipeline,
                       fps: int = 30,
@@ -79,7 +80,7 @@ def create_rgb_sensor(pipeline: dai.Pipeline,
     node.setFps(fps)
     return node
 
-
+# [create h264 encoder]
 def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30):
     rh_encoder = pipeline.createVideoEncoder()
     rh_encoder_profile = dai.VideoEncoderProperties.Profile.H264_MAIN
@@ -93,7 +94,7 @@ def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps
     print(rh_encoder.getWidth())
     print(rh_encoder.getHeight())
     return rh_encoder
-
+# [/create h264 encoder]
 
 def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30, quality: int = 100):
     encoder = pipeline.createVideoEncoder()
@@ -146,7 +147,8 @@ def create_output(pipeline, node_input: dai.Node.Output, stream_name: str):
     xout.setStreamName(stream_name)
     node_input.link(xout.input)
 
-
+# [launch outside robothub]
 if __name__ == "__main__":
     app = Application()
     app.run()
+# [/launch outside robothub]
