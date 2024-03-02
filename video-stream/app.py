@@ -37,6 +37,7 @@ class BusinessLogic:
                                                        frame_height=self.live_view.frame_height)
         self.live_view.publish(h264_frame=h264_frame.getCvFrame())
 
+# [/business logic]
 
 # [application]
 class Application(rh.BaseDepthAIApplication):
@@ -114,9 +115,9 @@ def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps
     rh_encoder.setNumFramesPool(3)
     node_input.link(rh_encoder.input)
     return rh_encoder
-
-
 # [/create h264 encoder]
+
+
 def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30, quality: int = 100):
     encoder = pipeline.createVideoEncoder()
     encoder_profile = dai.VideoEncoderProperties.Profile.MJPEG
@@ -174,3 +175,4 @@ def create_output(pipeline, node_input: dai.Node.Output, stream_name: str):
 if rh.LOCAL_DEV is True:
     app = Application()
     app.run()
+# [/launch outside robothub]
