@@ -6,6 +6,7 @@ import depthai as dai
 import object_detector_config as nn_config
 import robothub as rh
 
+
 # [business logic]
 class BusinessLogic:
     def __init__(self, frame_buffer: rh.FrameBuffer, live_view: rh.DepthaiLiveView):
@@ -37,7 +38,6 @@ class BusinessLogic:
                                                        frame_height=self.live_view.frame_height)
         self.live_view.publish(h264_frame=h264_frame.getCvFrame())
 
-# [/business logic]
 
 # [application]
 class Application(rh.BaseDepthAIApplication):
@@ -52,6 +52,7 @@ class Application(rh.BaseDepthAIApplication):
     def setup_pipeline(self) -> dai.Pipeline:
         """Define the pipeline using DepthAI."""
 
+        log.info(f"App config: {rh.CONFIGURATION}")
         pipeline = dai.Pipeline()
         rgb_sensor = create_rgb_sensor(pipeline=pipeline, preview_resolution=(640, 352))
         rgb_h264_encoder = create_h264_encoder(node_input=rgb_sensor.video, pipeline=pipeline)
@@ -115,9 +116,9 @@ def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps
     rh_encoder.setNumFramesPool(3)
     node_input.link(rh_encoder.input)
     return rh_encoder
+
+
 # [/create h264 encoder]
-
-
 def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30, quality: int = 100):
     encoder = pipeline.createVideoEncoder()
     encoder_profile = dai.VideoEncoderProperties.Profile.MJPEG
@@ -175,4 +176,3 @@ def create_output(pipeline, node_input: dai.Node.Output, stream_name: str):
 if rh.LOCAL_DEV is True:
     app = Application()
     app.run()
-# [/launch outside robothub]
