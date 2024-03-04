@@ -1,49 +1,178 @@
+import logging as log
 import time
 
-from depthai_sdk import OakCamera
-from depthai_sdk.classes import DetectionPacket
-from robothub import BaseApplication, LiveView
-from robothub.events import send_image_event
-from robothub_core import CONFIGURATION
+import blobconverter
+import depthai as dai
+import object_detector_config as nn_config
+import robothub as rh
 
 
+# [business logic]
 class BusinessLogic:
-    def __init__(self):
+    def __init__(self, frame_buffer: rh.FrameBuffer, live_view: rh.DepthaiLiveView):
+        self.live_view: rh.DepthaiLiveView = live_view
+        self.frame_buffer: rh.FrameBuffer = frame_buffer
+
         self.last_image_event_upload_seconds = time.time()
         self.last_video_event_upload_seconds = time.time()
-        self.live_view = None
 
-    def process_packets(self, packet: DetectionPacket):
-        for detection in packet.detections:
+    def process_pipeline_outputs(self, h264_frame: dai.ImgFrame, mjpeg_frame: dai.ImgFrame, object_detections: dai.ImgDetections):
+        self.frame_buffer.add_frame(h264_frame) # make sure to store every h264 frame
+        for detection in object_detections.detections:
             # visualize bounding box in the live view
-            bbox = [*detection.top_left, *detection.bottom_right]
-            self.live_view.add_rectangle(bbox, label=detection.label)
+            bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
+            self.live_view.add_rectangle(bbox, label=nn_config.labels[detection.label])
 
             current_time_seconds = time.time()
             # arbitrary condition for sending image events to RobotHub
-            if current_time_seconds - self.last_image_event_upload_seconds > CONFIGURATION["image_event_upload_interval_minutes"] * 60:
-                if detection.label == 'person':
+            if current_time_seconds - self.last_image_event_upload_seconds > rh.CONFIGURATION["image_event_upload_interval_minutes"] * 60:
+                if nn_config.labels[detection.label] == 'person':
                     self.last_image_event_upload_seconds = current_time_seconds
-                    send_image_event(image=packet.frame, title='Person detected')
+                    rh.send_image_event(image=mjpeg_frame.getCvFrame(), title='Person detected')
             # arbitrary condition for sending video events to RobotHub
-            if current_time_seconds - self.last_video_event_upload_seconds > CONFIGURATION["video_event_upload_interval_minutes"] * 60:
-                if detection.label == 'person':
+            if current_time_seconds - self.last_video_event_upload_seconds > rh.CONFIGURATION["video_event_upload_interval_minutes"] * 60:
+                if nn_config.labels[detection.label] == 'person':
                     self.last_video_event_upload_seconds = current_time_seconds
-                    self.live_view.save_video_event(before_seconds=60, after_seconds=60, title="Interesting video")
+                    self.frame_buffer.save_video_event(before_seconds=60, after_seconds=60, title="Interesting video",
+                                                       fps=rh.CONFIGURATION["fps"], frame_width=self.live_view.frame_width,
+                                                       frame_height=self.live_view.frame_height)
+        self.live_view.publish(h264_frame=h264_frame.getCvFrame())
 
 
-class Application(BaseApplication):
-    business_logic = BusinessLogic()
+# [application]
+class Application(rh.BaseDepthAIApplication):
 
-    def setup_pipeline(self, oak: OakCamera):
-        """Define the pipeline using depthai-sdk."""
+    def __init__(self):
+        super().__init__()
+        self.live_view = rh.DepthaiLiveView(name="live_view", unique_key="rgb",
+                                            width=1920, height=1080)
+        frame_buffer = rh.FrameBuffer(maxlen=rh.CONFIGURATION["fps"] * 60 * 2)  # buffer last 2 minutes
+        self.business_logic = BusinessLogic(frame_buffer=frame_buffer, live_view=self.live_view)
 
-        color = oak.create_camera(source='color', resolution="1080p", fps=30, encode='mjpeg')
-        nn = oak.create_nn(model='yolov5n_coco_416x416', input=color)
-        self.business_logic.live_view = LiveView.create(
-            device=oak,
-            component=color,
-            name="Color stream",
-            max_buffer_size=120
-        )
-        oak.callback(output=nn.out.main, callback=self.business_logic.process_packets)
+    def setup_pipeline(self) -> dai.Pipeline:
+        """Define the pipeline using DepthAI."""
+
+        log.info(f"App config: {rh.CONFIGURATION}")
+        pipeline = dai.Pipeline()
+        rgb_sensor = create_rgb_sensor(pipeline=pipeline, preview_resolution=(640, 352))
+        rgb_h264_encoder = create_h264_encoder(node_input=rgb_sensor.video, pipeline=pipeline)
+        rgb_mjpeg_encoder = create_mjpeg_encoder(node_input=rgb_sensor.video, pipeline=pipeline)
+        object_detection_nn = create_yolov7tiny_coco_nn(node_input=rgb_sensor.preview, pipeline=pipeline)
+
+        create_output(pipeline=pipeline, node_input=rgb_h264_encoder.bitstream, stream_name="h264_frames")
+        create_output(pipeline=pipeline, node_input=rgb_mjpeg_encoder.bitstream, stream_name="mjpeg_frames")
+        create_output(pipeline=pipeline, node_input=object_detection_nn.out, stream_name="object_detections")
+        return pipeline
+
+    def manage_device(self, device: dai.Device):
+        log.info(f"{device.getMxId()} creating output queues...")
+        h264_frames_queue = device.getOutputQueue(name="h264_frames", maxSize=10, blocking=True)
+        mjpeg_frames_queue = device.getOutputQueue(name="mjpeg_frames", maxSize=10, blocking=True)
+        object_detections_queue = device.getOutputQueue(name="object_detections", maxSize=10, blocking=True)
+
+        log.info(f"{device.getMxId()} Application started")
+        while rh.app_is_running() and self.device_is_running:
+            h264_frame = h264_frames_queue.get()
+            mjpeg_frame = mjpeg_frames_queue.get()
+            object_detections = object_detections_queue.get()
+            self.business_logic.process_pipeline_outputs(h264_frame=h264_frame, mjpeg_frame=mjpeg_frame, object_detections=object_detections)
+            time.sleep(0.001)
+
+    def on_configuration_changed(self, configuration_changes: dict) -> None:
+        log.info(f"CONFIGURATION CHANGES: {configuration_changes}")
+        if "fps" in configuration_changes:
+            log.info(f"FPS change needs a new pipeline. Restarting OAK device...")
+            self.restart_device()
+
+
+# [/application]
+
+def create_rgb_sensor(pipeline: dai.Pipeline,
+                      fps: int = 30,
+                      resolution: dai.ColorCameraProperties.SensorResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P,
+                      preview_resolution: tuple = (1280, 720),
+                      ) -> dai.node.ColorCamera:
+    node = pipeline.createColorCamera()
+    node.setBoardSocket(dai.CameraBoardSocket.CAM_A)
+    node.setInterleaved(False)
+    node.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+    node.setPreviewNumFramesPool(4)
+    node.setPreviewSize(*preview_resolution)
+    node.setVideoSize(1920, 1080)
+    node.setResolution(resolution)
+    node.setFps(fps)
+    return node
+
+
+# [create h264 encoder]
+def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30):
+    rh_encoder = pipeline.createVideoEncoder()
+    rh_encoder_profile = dai.VideoEncoderProperties.Profile.H264_MAIN
+    rh_encoder.setDefaultProfilePreset(fps, rh_encoder_profile)
+    rh_encoder.input.setQueueSize(2)
+    rh_encoder.input.setBlocking(False)
+    rh_encoder.setKeyframeFrequency(fps)
+    rh_encoder.setRateControlMode(dai.VideoEncoderProperties.RateControlMode.CBR)
+    rh_encoder.setNumFramesPool(3)
+    node_input.link(rh_encoder.input)
+    return rh_encoder
+
+
+# [/create h264 encoder]
+def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30, quality: int = 100):
+    encoder = pipeline.createVideoEncoder()
+    encoder_profile = dai.VideoEncoderProperties.Profile.MJPEG
+    encoder.setDefaultProfilePreset(fps, encoder_profile)
+    encoder.setQuality(quality)
+    node_input.link(encoder.input)
+    return encoder
+
+
+def create_image_manip(node_input: dai.Node.Output, pipeline: dai.Pipeline, resize: tuple[int, int], keep_aspect_ration: bool = False,
+                       frame_type: dai.RawImgFrame.Type = dai.RawImgFrame.Type.BGR888p, output_frame_dims: int = 3,
+                       blocking_input_queue: bool = False, input_queue_size: int = 4, frames_pool: int = 4,
+                       wait_for_config: bool = False) -> dai.node.ImageManip:
+    image_manip = pipeline.createImageManip()
+    image_manip.initialConfig.setResize(*resize)
+    image_manip.initialConfig.setFrameType(frame_type)
+    image_manip.initialConfig.setKeepAspectRatio(keep_aspect_ration)
+    image_manip.setWaitForConfigInput(wait_for_config)
+    image_manip.setNumFramesPool(frames_pool)
+    image_manip.setMaxOutputFrameSize(resize[0] * resize[1] * output_frame_dims)
+    image_manip.inputImage.setBlocking(blocking_input_queue)
+    image_manip.inputImage.setQueueSize(input_queue_size)
+    node_input.link(image_manip.inputImage)
+    return image_manip
+
+
+def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipeline) -> dai.node.YoloDetectionNetwork:
+    model = "yolov7tiny_coco_640x352"
+    node = pipeline.createYoloDetectionNetwork()
+    blob = dai.OpenVINO.Blob(blobconverter.from_zoo(name=model, zoo_type="depthai", shaves=6))
+    node.setBlob(blob)
+    node_input.link(node.input)
+    node.input.setBlocking(False)
+    # Yolo specific parameters
+    node.setConfidenceThreshold(0.5)
+    node.setNumClasses(80)
+    node.setCoordinateSize(4)
+    node.setAnchors([12.0, 16.0, 19.0, 36.0, 40.0, 28.0, 36.0, 75.0, 76.0, 55.0, 72.0, 146.0, 142.0, 110.0, 192.0, 243.0, 459.0, 401.0])
+    node.setAnchorMasks({
+        "side80": [0, 1, 2],
+        "side40": [3, 4, 5],
+        "side20": [6, 7, 8]
+    })
+    node.setIouThreshold(0.5)
+    return node
+
+
+def create_output(pipeline, node_input: dai.Node.Output, stream_name: str):
+    xout = pipeline.createXLinkOut()
+    xout.setStreamName(stream_name)
+    node_input.link(xout.input)
+
+
+# [launch outside robothub]
+if rh.LOCAL_DEV is True:
+    app = Application()
+    app.run()

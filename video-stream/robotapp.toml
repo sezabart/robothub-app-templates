@@ -14,6 +14,19 @@ name = "ghcr.io/luxonis/robothub-app-v2:2023.326.2033-rvc2-regular"
 
 [[configuration]]
 visual = "section"
+title = "Camera config"
+
+[[configuration]]
+key = "fps"
+label = "FPS"
+field = "num_range"
+step = 1
+min = 1
+max = 30
+initial_value = 20
+
+[[configuration]]
+visual = "section"
 title = "Upload intervals"
 
 [[configuration]]
