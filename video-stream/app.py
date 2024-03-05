@@ -69,6 +69,7 @@ class Application(rh.BaseDepthAIApplication):
 
 # [/setup pipeline]
 
+# [main loop]
     def manage_device(self, device: dai.Device):
         log.info(f"{device.getMxId()} creating output queues...")
         h264_frames_queue = device.getOutputQueue(name="h264_frames", maxSize=10, blocking=True)
@@ -83,14 +84,20 @@ class Application(rh.BaseDepthAIApplication):
             self.business_logic.process_pipeline_outputs(h264_frame=h264_frame, mjpeg_frame=mjpeg_frame, object_detections=object_detections)
             time.sleep(0.001)
 
+# [/main loop]
+
+# [config change listener]
     def on_configuration_changed(self, configuration_changes: dict) -> None:
         log.info(f"CONFIGURATION CHANGES: {configuration_changes}")
         if "fps" in configuration_changes:
             log.info(f"FPS change needs a new pipeline. Restarting OAK device...")
             self.restart_device()
 
+# [/config change listener]
 # [/application]
 
+
+# [rgb sensor]
 def create_rgb_sensor(pipeline: dai.Pipeline,
                       fps: int = 30,
                       resolution: dai.ColorCameraProperties.SensorResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P,
@@ -106,8 +113,10 @@ def create_rgb_sensor(pipeline: dai.Pipeline,
     node.setResolution(resolution)
     node.setFps(fps)
     return node
+# [/rgb sensor]
 
 
+# [h264 encoder]
 def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30):
     rh_encoder = pipeline.createVideoEncoder()
     rh_encoder_profile = dai.VideoEncoderProperties.Profile.H264_MAIN
@@ -119,8 +128,10 @@ def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps
     rh_encoder.setNumFramesPool(3)
     node_input.link(rh_encoder.input)
     return rh_encoder
+# [/h264 encoder]
 
 
+# [mjpeg encoder]
 def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30, quality: int = 100):
     encoder = pipeline.createVideoEncoder()
     encoder_profile = dai.VideoEncoderProperties.Profile.MJPEG
@@ -128,8 +139,10 @@ def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fp
     encoder.setQuality(quality)
     node_input.link(encoder.input)
     return encoder
+# [/mjpeg encoder]
 
 
+# [image manip]
 def create_image_manip(node_input: dai.Node.Output, pipeline: dai.Pipeline, resize: tuple[int, int], keep_aspect_ration: bool = False,
                        frame_type: dai.RawImgFrame.Type = dai.RawImgFrame.Type.BGR888p, output_frame_dims: int = 3,
                        blocking_input_queue: bool = False, input_queue_size: int = 4, frames_pool: int = 4,
@@ -145,8 +158,10 @@ def create_image_manip(node_input: dai.Node.Output, pipeline: dai.Pipeline, resi
     image_manip.inputImage.setQueueSize(input_queue_size)
     node_input.link(image_manip.inputImage)
     return image_manip
+# [/image manip]
 
 
+# [yolov7 nn]
 def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipeline) -> dai.node.YoloDetectionNetwork:
     model = "yolov7tiny_coco_640x352"
     node = pipeline.createYoloDetectionNetwork()
@@ -166,14 +181,19 @@ def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipelin
     })
     node.setIouThreshold(0.5)
     return node
+# [/yolov7 nn]
 
 
+# [xlink out]
 def create_output(pipeline, node_input: dai.Node.Output, stream_name: str):
     xout = pipeline.createXLinkOut()
     xout.setStreamName(stream_name)
     node_input.link(xout.input)
+# [/xlink out]
 
 
+# [local development]
 if rh.LOCAL_DEV is True:
     app = Application()
     app.run()
+# [/local development]
