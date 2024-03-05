@@ -51,7 +51,6 @@ class Application(rh.BaseDepthAIApplication):
         frame_buffer = rh.FrameBuffer(maxlen=rh.CONFIGURATION["fps"] * 60 * 2)  # buffer last 2 minutes
         self.business_logic = BusinessLogic(frame_buffer=frame_buffer, live_view=self.live_view)
 
-    # [setup pipeline]
     def setup_pipeline(self) -> dai.Pipeline:
         """Define the pipeline using DepthAI."""
 
@@ -66,7 +65,6 @@ class Application(rh.BaseDepthAIApplication):
         create_output(pipeline=pipeline, node_input=rgb_mjpeg_encoder.bitstream, stream_name="mjpeg_frames")
         create_output(pipeline=pipeline, node_input=object_detection_nn.out, stream_name="object_detections")
         return pipeline
-    # [/setup pipeline]
 
     def manage_device(self, device: dai.Device):
         log.info(f"{device.getMxId()} creating output queues...")
