@@ -38,6 +38,7 @@ class BusinessLogic:
                                                        frame_height=self.live_view.frame_height)
         self.live_view.publish(h264_frame=h264_frame.getCvFrame())
 
+
 # [\business logic]
 
 
