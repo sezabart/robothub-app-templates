@@ -50,7 +50,6 @@ class Application(rh.BaseDepthAIApplication):
         frame_buffer = rh.FrameBuffer(maxlen=rh.CONFIGURATION["fps"] * 60 * 2)  # buffer last 2 minutes
         self.business_logic = BusinessLogic(frame_buffer=frame_buffer, live_view=self.live_view)
 
-# [pipeline_setup]
     def setup_pipeline(self) -> dai.Pipeline:
         """Define the pipeline using DepthAI."""
 
@@ -65,7 +64,6 @@ class Application(rh.BaseDepthAIApplication):
         create_output(pipeline=pipeline, node_input=rgb_mjpeg_encoder.bitstream, stream_name="mjpeg_frames")
         create_output(pipeline=pipeline, node_input=object_detection_nn.out, stream_name="object_detections")
         return pipeline
-# [\pipeline_setup]
 
     def manage_device(self, device: dai.Device):
         log.info(f"{device.getMxId()} creating output queues...")
@@ -90,6 +88,7 @@ class Application(rh.BaseDepthAIApplication):
 
 # [/application]
 
+# [create rgb sensor]
 def create_rgb_sensor(pipeline: dai.Pipeline,
                       fps: int = 30,
                       resolution: dai.ColorCameraProperties.SensorResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P,
@@ -105,6 +104,7 @@ def create_rgb_sensor(pipeline: dai.Pipeline,
     node.setResolution(resolution)
     node.setFps(fps)
     return node
+# [\create rgb sensor]
 
 
 # [create h264 encoder]
@@ -122,6 +122,7 @@ def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps
 # [/create h264 encoder]
 
 
+# [create mjpeg encoder]
 def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30, quality: int = 100):
     encoder = pipeline.createVideoEncoder()
     encoder_profile = dai.VideoEncoderProperties.Profile.MJPEG
@@ -129,8 +130,10 @@ def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fp
     encoder.setQuality(quality)
     node_input.link(encoder.input)
     return encoder
+# [\create mjpeg encoder]
 
 
+# [create image manip]
 def create_image_manip(node_input: dai.Node.Output, pipeline: dai.Pipeline, resize: tuple[int, int], keep_aspect_ration: bool = False,
                        frame_type: dai.RawImgFrame.Type = dai.RawImgFrame.Type.BGR888p, output_frame_dims: int = 3,
                        blocking_input_queue: bool = False, input_queue_size: int = 4, frames_pool: int = 4,
@@ -146,8 +149,10 @@ def create_image_manip(node_input: dai.Node.Output, pipeline: dai.Pipeline, resi
     image_manip.inputImage.setQueueSize(input_queue_size)
     node_input.link(image_manip.inputImage)
     return image_manip
+# [\create image manip]
 
 
+# [create yolo nn]
 def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipeline) -> dai.node.YoloDetectionNetwork:
     model = "yolov7tiny_coco_640x352"
     node = pipeline.createYoloDetectionNetwork()
@@ -167,12 +172,15 @@ def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipelin
     })
     node.setIouThreshold(0.5)
     return node
+# [\create yolo nn]
 
 
+# [create xlink out]
 def create_output(pipeline, node_input: dai.Node.Output, stream_name: str):
     xout = pipeline.createXLinkOut()
     xout.setStreamName(stream_name)
     node_input.link(xout.input)
+# [\create xlink out]
 
 
 # [launch outside robothub]
