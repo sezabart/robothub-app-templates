@@ -90,7 +90,6 @@ class Application(rh.BaseDepthAIApplication):
 
 # [/application]
 
-# [create rgb sensor]
 def create_rgb_sensor(pipeline: dai.Pipeline,
                       fps: int = 30,
                       resolution: dai.ColorCameraProperties.SensorResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P,
@@ -106,10 +105,8 @@ def create_rgb_sensor(pipeline: dai.Pipeline,
     node.setResolution(resolution)
     node.setFps(fps)
     return node
-# [\create rgb sensor]
 
 
-# [create h264 encoder]
 def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30):
     rh_encoder = pipeline.createVideoEncoder()
     rh_encoder_profile = dai.VideoEncoderProperties.Profile.H264_MAIN
@@ -121,10 +118,8 @@ def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps
     rh_encoder.setNumFramesPool(3)
     node_input.link(rh_encoder.input)
     return rh_encoder
-# [/create h264 encoder]
 
 
-# [create mjpeg encoder]
 def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30, quality: int = 100):
     encoder = pipeline.createVideoEncoder()
     encoder_profile = dai.VideoEncoderProperties.Profile.MJPEG
@@ -132,10 +127,8 @@ def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fp
     encoder.setQuality(quality)
     node_input.link(encoder.input)
     return encoder
-# [\create mjpeg encoder]
 
 
-# [create image manip]
 def create_image_manip(node_input: dai.Node.Output, pipeline: dai.Pipeline, resize: tuple[int, int], keep_aspect_ration: bool = False,
                        frame_type: dai.RawImgFrame.Type = dai.RawImgFrame.Type.BGR888p, output_frame_dims: int = 3,
                        blocking_input_queue: bool = False, input_queue_size: int = 4, frames_pool: int = 4,
@@ -151,10 +144,8 @@ def create_image_manip(node_input: dai.Node.Output, pipeline: dai.Pipeline, resi
     image_manip.inputImage.setQueueSize(input_queue_size)
     node_input.link(image_manip.inputImage)
     return image_manip
-# [\create image manip]
 
 
-# [create yolo nn]
 def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipeline) -> dai.node.YoloDetectionNetwork:
     model = "yolov7tiny_coco_640x352"
     node = pipeline.createYoloDetectionNetwork()
@@ -174,19 +165,14 @@ def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipelin
     })
     node.setIouThreshold(0.5)
     return node
-# [\create yolo nn]
 
 
-# [create xlink out]
 def create_output(pipeline, node_input: dai.Node.Output, stream_name: str):
     xout = pipeline.createXLinkOut()
     xout.setStreamName(stream_name)
     node_input.link(xout.input)
-# [\create xlink out]
 
 
-# [launch outside robothub]
 if rh.LOCAL_DEV is True:
     app = Application()
     app.run()
-# [\launch outside robothub]
