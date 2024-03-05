@@ -7,7 +7,7 @@ import object_detector_config as nn_config
 import robothub as rh
 
 
-# [business_logic]
+# [business logic]
 class BusinessLogic:
     def __init__(self, frame_buffer: rh.FrameBuffer, live_view: rh.DepthaiLiveView):
         self.live_view: rh.DepthaiLiveView = live_view
@@ -38,8 +38,7 @@ class BusinessLogic:
                                                        frame_height=self.live_view.frame_height)
         self.live_view.publish(h264_frame=h264_frame.getCvFrame())
 
-
-# [\business_logic]
+# [/business logic]
 
 
 # [application]
@@ -52,6 +51,7 @@ class Application(rh.BaseDepthAIApplication):
         frame_buffer = rh.FrameBuffer(maxlen=rh.CONFIGURATION["fps"] * 60 * 2)  # buffer last 2 minutes
         self.business_logic = BusinessLogic(frame_buffer=frame_buffer, live_view=self.live_view)
 
+    # [setup pipeline]
     def setup_pipeline(self) -> dai.Pipeline:
         """Define the pipeline using DepthAI."""
 
@@ -66,6 +66,7 @@ class Application(rh.BaseDepthAIApplication):
         create_output(pipeline=pipeline, node_input=rgb_mjpeg_encoder.bitstream, stream_name="mjpeg_frames")
         create_output(pipeline=pipeline, node_input=object_detection_nn.out, stream_name="object_detections")
         return pipeline
+    # [/setup pipeline]
 
     def manage_device(self, device: dai.Device):
         log.info(f"{device.getMxId()} creating output queues...")
@@ -86,7 +87,6 @@ class Application(rh.BaseDepthAIApplication):
         if "fps" in configuration_changes:
             log.info(f"FPS change needs a new pipeline. Restarting OAK device...")
             self.restart_device()
-
 
 # [/application]
 
