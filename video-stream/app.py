@@ -7,7 +7,7 @@ import object_detector_config as nn_config
 import robothub as rh
 
 
-# [business logic]
+# [business_logic]
 class BusinessLogic:
     def __init__(self, frame_buffer: rh.FrameBuffer, live_view: rh.DepthaiLiveView):
         self.live_view: rh.DepthaiLiveView = live_view
@@ -39,7 +39,7 @@ class BusinessLogic:
         self.live_view.publish(h264_frame=h264_frame.getCvFrame())
 
 
-# [\business logic]
+# [\business_logic]
 
 
 # [application]
