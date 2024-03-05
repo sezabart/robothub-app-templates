@@ -37,6 +37,7 @@ class BusinessLogic:
                                                        fps=rh.CONFIGURATION["fps"], frame_width=self.live_view.frame_width,
                                                        frame_height=self.live_view.frame_height)
         self.live_view.publish(h264_frame=h264_frame.getCvFrame())
+# [\business logic]
 
 
 # [application]
@@ -49,6 +50,7 @@ class Application(rh.BaseDepthAIApplication):
         frame_buffer = rh.FrameBuffer(maxlen=rh.CONFIGURATION["fps"] * 60 * 2)  # buffer last 2 minutes
         self.business_logic = BusinessLogic(frame_buffer=frame_buffer, live_view=self.live_view)
 
+# [pipeline_setup]
     def setup_pipeline(self) -> dai.Pipeline:
         """Define the pipeline using DepthAI."""
 
@@ -63,6 +65,7 @@ class Application(rh.BaseDepthAIApplication):
         create_output(pipeline=pipeline, node_input=rgb_mjpeg_encoder.bitstream, stream_name="mjpeg_frames")
         create_output(pipeline=pipeline, node_input=object_detection_nn.out, stream_name="object_detections")
         return pipeline
+# [\pipeline_setup]
 
     def manage_device(self, device: dai.Device):
         log.info(f"{device.getMxId()} creating output queues...")
@@ -116,9 +119,9 @@ def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps
     rh_encoder.setNumFramesPool(3)
     node_input.link(rh_encoder.input)
     return rh_encoder
-
-
 # [/create h264 encoder]
+
+
 def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30, quality: int = 100):
     encoder = pipeline.createVideoEncoder()
     encoder_profile = dai.VideoEncoderProperties.Profile.MJPEG
@@ -176,3 +179,4 @@ def create_output(pipeline, node_input: dai.Node.Output, stream_name: str):
 if rh.LOCAL_DEV is True:
     app = Application()
     app.run()
+# [\launch outside robothub]
