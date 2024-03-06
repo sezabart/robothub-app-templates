@@ -97,6 +97,7 @@ class Application(rh.BaseDepthAIApplication):
 # [/application]
 
 
+# [pipeline]
 # [rgb sensor]
 def create_rgb_sensor(pipeline: dai.Pipeline,
                       fps: int = 30,
@@ -116,6 +117,7 @@ def create_rgb_sensor(pipeline: dai.Pipeline,
 # [/rgb sensor]
 
 
+# [encoders]
 # [h264 encoder]
 def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30):
     rh_encoder = pipeline.createVideoEncoder()
@@ -140,6 +142,7 @@ def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fp
     node_input.link(encoder.input)
     return encoder
 # [/mjpeg encoder]
+# [/encoders]
 
 
 # [image manip]
@@ -190,6 +193,7 @@ def create_output(pipeline, node_input: dai.Node.Output, stream_name: str):
     xout.setStreamName(stream_name)
     node_input.link(xout.input)
 # [/xlink out]
+# [/pipeline]
 
 
 # [local development]
