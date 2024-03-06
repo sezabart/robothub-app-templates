@@ -118,7 +118,7 @@ def create_rgb_sensor(pipeline: dai.Pipeline,
 
 
 # [encoders]
-# [h264 encoder]
+# [h encoder]
 def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps: int = 30):
     rh_encoder = pipeline.createVideoEncoder()
     rh_encoder_profile = dai.VideoEncoderProperties.Profile.H264_MAIN
@@ -130,7 +130,7 @@ def create_h264_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fps
     rh_encoder.setNumFramesPool(3)
     node_input.link(rh_encoder.input)
     return rh_encoder
-# [/h264 encoder]
+# [/h encoder]
 
 
 # [mjpeg encoder]
@@ -145,7 +145,7 @@ def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fp
 # [/encoders]
 
 
-# [yolov7 nn]
+# [yolov_seven nn]
 def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipeline) -> dai.node.YoloDetectionNetwork:
     model = "yolov7tiny_coco_640x352"
     node = pipeline.createYoloDetectionNetwork()
@@ -165,7 +165,7 @@ def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipelin
     })
     node.setIouThreshold(0.5)
     return node
-# [/yolov7 nn]
+# [/yolov_seven nn]
 
 
 # [xlink out]
