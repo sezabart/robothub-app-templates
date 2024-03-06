@@ -145,7 +145,7 @@ def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fp
 # [/encoders]
 
 
-# [yolov_seven nn]
+# [yolo nn]
 def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipeline) -> dai.node.YoloDetectionNetwork:
     model = "yolov7tiny_coco_640x352"
     node = pipeline.createYoloDetectionNetwork()
@@ -165,7 +165,7 @@ def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipelin
     })
     node.setIouThreshold(0.5)
     return node
-# [/yolov_seven nn]
+# [/yolo nn]
 
 
 # [xlink out]
