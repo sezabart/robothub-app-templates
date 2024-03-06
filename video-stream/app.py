@@ -153,7 +153,7 @@ def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipelin
     node.setBlob(blob)
     node_input.link(node.input)
     node.input.setBlocking(False)
-
+    # Yolo specific parameters
     node.setConfidenceThreshold(0.5)
     node.setNumClasses(80)
     node.setCoordinateSize(4)
