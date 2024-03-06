@@ -145,25 +145,6 @@ def create_mjpeg_encoder(node_input: dai.Node.Output, pipeline: dai.Pipeline, fp
 # [/encoders]
 
 
-# [image manip]
-def create_image_manip(node_input: dai.Node.Output, pipeline: dai.Pipeline, resize: tuple[int, int], keep_aspect_ration: bool = False,
-                       frame_type: dai.RawImgFrame.Type = dai.RawImgFrame.Type.BGR888p, output_frame_dims: int = 3,
-                       blocking_input_queue: bool = False, input_queue_size: int = 4, frames_pool: int = 4,
-                       wait_for_config: bool = False) -> dai.node.ImageManip:
-    image_manip = pipeline.createImageManip()
-    image_manip.initialConfig.setResize(*resize)
-    image_manip.initialConfig.setFrameType(frame_type)
-    image_manip.initialConfig.setKeepAspectRatio(keep_aspect_ration)
-    image_manip.setWaitForConfigInput(wait_for_config)
-    image_manip.setNumFramesPool(frames_pool)
-    image_manip.setMaxOutputFrameSize(resize[0] * resize[1] * output_frame_dims)
-    image_manip.inputImage.setBlocking(blocking_input_queue)
-    image_manip.inputImage.setQueueSize(input_queue_size)
-    node_input.link(image_manip.inputImage)
-    return image_manip
-# [/image manip]
-
-
 # [yolov7 nn]
 def create_yolov7tiny_coco_nn(node_input: dai.Node.Output, pipeline: dai.Pipeline) -> dai.node.YoloDetectionNetwork:
     model = "yolov7tiny_coco_640x352"
