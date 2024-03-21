@@ -178,7 +178,7 @@ def create_output(pipeline, node_input: dai.Node.Output, stream_name: str):
 
 
 # [local development]
-if rh.LOCAL_DEV is True:
+if __name__ == "__main__":
     app = Application()
     app.run()
 # [/local development]
