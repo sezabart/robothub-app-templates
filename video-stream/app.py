@@ -109,6 +109,7 @@ def create_rgb_sensor(pipeline: dai.Pipeline,
     node.setInterleaved(False)
     node.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
     node.setPreviewNumFramesPool(4)
+    node.setPreviewKeepAspectRatio(True) # True: letter-boxing False: resizing, for square preview resolution resizing is advised.
     node.setPreviewSize(*preview_resolution)
     node.setVideoSize(1920, 1080)
     node.setResolution(resolution)
